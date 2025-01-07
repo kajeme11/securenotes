@@ -3,9 +3,13 @@ package com.secure.notes.security;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.authentication.configurers.provisioning.InMemoryUserDetailsManagerConfigurer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 
 /*
@@ -31,11 +35,8 @@ public class SecurityConfig {
          * /public/contact
          * See the pattern /public/**
          */
-        http.authorizeHttpRequests((request) -> request
-                .requestMatchers("/contact").permitAll()
-                .requestMatchers("/public/**").permitAll()
-                .requestMatchers("/admin").denyAll()
-                .anyRequest().authenticated());
+        http.authorizeHttpRequests((request) ->
+                request.anyRequest().authenticated());
         //disable csrf
         http.csrf(csrf -> csrf.disable());
         /*
@@ -48,9 +49,42 @@ public class SecurityConfig {
             Make API stateless
             cookies are not stored in server
          */
-        http.sessionManagement((session) ->
-                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
         http.httpBasic(Customizer.withDefaults());
         return http.build();
     }
+
+
+    /**
+     *
+     * These is used for development, testing, prototype purpose
+     * we can use basic auth with the credentials created below
+     * to use in memory credentials, not stored in database,
+     *
+     * Use this multi user interaction with server
+     *
+     * @return
+     */
+    @Bean
+    public UserDetailsService userDetailsService(){
+        InMemoryUserDetailsManager manager =
+                new InMemoryUserDetailsManager();
+        if(!manager.userExists("user1")){
+            manager.createUser(
+                    User.withUsername("user1")
+                            .password("{noop}password1")
+                            .roles("USER")
+                            .build()
+            );
+        }
+        if(!manager.userExists("admin")){
+            manager.createUser(
+                    User.withUsername("admin")
+                            .password("{noop}password1")
+                            .roles("ADMIN")
+                            .build()
+            );
+        }
+        return manager;
+    }
+
 }
