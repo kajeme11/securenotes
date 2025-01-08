@@ -19,6 +19,7 @@ import org.springframework.security.provisioning.JdbcUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import com.secure.notes.models.AppRole;
 import com.secure.notes.models.User;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import javax.sql.DataSource;
 import java.time.LocalDate;
@@ -56,6 +57,7 @@ public class SecurityConfig {
                         .anyRequest().authenticated());
         //disable csrf
         http.csrf(csrf -> csrf.disable());
+        http.addFilterBefore(new CustomLoggingFilter(), UsernamePasswordAuthenticationFilter.class);
         /*
         * We will not see the log in page anymore
         * There will be an alert box instead
