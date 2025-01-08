@@ -7,6 +7,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -30,6 +31,9 @@ import java.time.LocalDate;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true,
+                        securedEnabled = true,
+                        jsr250Enabled = true)
 public class SecurityConfig {
     @Bean
     SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception{
@@ -44,7 +48,10 @@ public class SecurityConfig {
          * See the pattern /public/**
          */
         http.authorizeHttpRequests((request) ->
-                request.anyRequest().authenticated());
+                request
+//                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+//                        .requestMatchers("/public/**").permitAll()
+                        .anyRequest().authenticated());
         //disable csrf
         http.csrf(csrf -> csrf.disable());
         /*
