@@ -20,6 +20,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import com.secure.notes.models.AppRole;
 import com.secure.notes.models.User;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 
 import javax.sql.DataSource;
 import java.time.LocalDate;
@@ -40,6 +41,11 @@ import java.time.LocalDate;
 public class SecurityConfig {
     @Bean
     SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception{
+        //disable csrf
+//        http.csrf(csrf -> csrf.disable());
+        //csrf stores the token in a cookie format,  token in a cookie named "XSRF-TOKEN" and reads from the header "X-XSRF-TOKEN"
+        http.csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                .ignoringRequestMatchers("/api/auth/public/**")); // no need for csrf tokens for public api
         /**
          * request.anyRequest() will try to authenticate user for any endpoint
          * But what about endpoint that should be puvlic and don't need authentication
@@ -54,9 +60,9 @@ public class SecurityConfig {
                 request
 //                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
 //                        .requestMatchers("/public/**").permitAll()
+                        .requestMatchers("/api/csrf-token").permitAll()
                         .anyRequest().authenticated());
-        //disable csrf
-        http.csrf(csrf -> csrf.disable());
+        http.formLogin(Customizer.withDefaults());
         http.addFilterBefore(new CustomLoggingFilter(), UsernamePasswordAuthenticationFilter.class);
         /*
         * We will not see the log in page anymore
