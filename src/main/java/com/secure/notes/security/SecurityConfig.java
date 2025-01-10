@@ -3,10 +3,15 @@ package com.secure.notes.security;
 import com.secure.notes.models.Role;
 import com.secure.notes.repositories.RoleRepository;
 import com.secure.notes.repositories.UserRepository;
+import com.secure.notes.security.jwt.AuthEntryPointJwt;
+import com.secure.notes.security.jwt.AuthTokenFilter;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -39,6 +44,15 @@ import java.time.LocalDate;
                         securedEnabled = true,
                         jsr250Enabled = true)
 public class SecurityConfig {
+
+    @Autowired
+    private AuthEntryPointJwt unauthorizedHandler;
+
+    @Bean
+    public AuthTokenFilter authenticationJwtTokenFilter() {
+        return new AuthTokenFilter();
+    }
+
     @Bean
     SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception{
         //disable csrf
@@ -61,9 +75,14 @@ public class SecurityConfig {
 //                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
 //                        .requestMatchers("/public/**").permitAll()
                         .requestMatchers("/api/csrf-token").permitAll()
+                        .requestMatchers("/api/auth/public/**").permitAll()
                         .anyRequest().authenticated());
-        http.formLogin(Customizer.withDefaults());
+        http.exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler));
+        //add AuthTokenFilter to filter chain
+        http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
+        // add customLogginFilter to filteChain
         http.addFilterBefore(new CustomLoggingFilter(), UsernamePasswordAuthenticationFilter.class);
+        http.formLogin(Customizer.withDefaults());
         /*
         * We will not see the log in page anymore
         * There will be an alert box instead
@@ -130,43 +149,20 @@ public class SecurityConfig {
         };
     }
 
-
     /**
+     * This AuthenticationManager Bean is needed for authenticating incoming request
+     * in the AuthController login endpoint
      *
-     * These is used for development, testing, prototype purpose
-     * we can use basic auth with the credentials created below
-     * to use in memory credentials, not stored in database,
+     * We Autowired AuthenticationManager in the controller so we need to
+     * inject the bean otherwise we would get an error
      *
-     * Use this multi user interaction with server
-     *
+     * @param authenticationConfiguration
      * @return
+     * @throws Exception
      */
-//    @Bean
-//    public UserDetailsService userDetailsService(DataSource dataSource){
-
-        //IN MEMORY DETAILS MANAGER
-//        InMemoryUserDetailsManager manager =
-//DATABASE DETAILS MANAGER, needs data source configured in application properties
-//it also populates other user details automatically with default values
-//        JdbcUserDetailsManager manager =
-//                new JdbcUserDetailsManager(dataSource);
-//        if(!manager.userExists("user1")){
-//            manager.createUser(
-//                    User.withUsername("user1")
-//                            .password("{noop}password1")
-//                            .roles("USER")
-//                            .build()
-//            );
-//        }
-//        if(!manager.userExists("admin")){
-//            manager.createUser(
-//                    User.withUsername("admin")
-//                            .password("{noop}password1")
-//                            .roles("ADMIN")
-//                            .build()
-//            );
-//        }
-//        return manager;
-//    }
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
+        return authenticationConfiguration.getAuthenticationManager();
+    }
 
 }
