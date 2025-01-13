@@ -33,6 +33,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/auth")
+@CrossOrigin
 public class AuthController {
 
     @Autowired
@@ -131,6 +132,7 @@ public class AuthController {
         return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
     }
 
+
     @GetMapping("/user")
     public ResponseEntity<?> getUserDetails(@AuthenticationPrincipal UserDetails userDetails) {
         User user = userService.findByUsername(userDetails.getUsername());
@@ -157,9 +159,7 @@ public class AuthController {
     }
 
     @GetMapping("/username")
-    public String getUsername(@AuthenticationPrincipal UserDetails userDetails){
-        Optional<String> username = Optional.ofNullable(userDetails.getUsername());
-        return username.orElse("");
+    public String currentUserName(@AuthenticationPrincipal UserDetails userDetails) {
+        return (userDetails != null) ? userDetails.getUsername() : "";
     }
-
 }

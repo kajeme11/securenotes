@@ -26,9 +26,15 @@ import com.secure.notes.models.AppRole;
 import com.secure.notes.models.User;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import javax.sql.DataSource;
 import java.time.LocalDate;
+import java.util.Arrays;
+
+import static org.springframework.security.config.Customizer.withDefaults;
 
 /*
        change the default authentication from Basic Authentication
@@ -54,46 +60,27 @@ public class SecurityConfig {
     }
 
     @Bean
-    SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception{
-        //disable csrf
-//        http.csrf(csrf -> csrf.disable());
-        //csrf stores the token in a cookie format,  token in a cookie named "XSRF-TOKEN" and reads from the header "X-XSRF-TOKEN"
-        http.csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                .ignoringRequestMatchers("/api/auth/public/**")); // no need for csrf tokens for public api
-        /**
-         * request.anyRequest() will try to authenticate user for any endpoint
-         * But what about endpoint that should be puvlic and don't need authentication
-         * We can use requestMatchers(<pattern>)
-         *
-         * /public/login
-         * /public/signup
-         * /public/contact
-         * See the pattern /public/**
-         */
-        http.authorizeHttpRequests((request) ->
-                request
-//                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
-//                        .requestMatchers("/public/**").permitAll()
-                        .requestMatchers("/api/csrf-token").permitAll()
-                        .requestMatchers("/api/auth/public/**").permitAll()
-                        .anyRequest().authenticated());
-        http.exceptionHandling(exception -> exception.authenticationEntryPoint(unauthorizedHandler));
-        //add AuthTokenFilter to filter chain
-        http.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
-        // add customLogginFilter to filteChain
-        http.addFilterBefore(new CustomLoggingFilter(), UsernamePasswordAuthenticationFilter.class);
-        http.formLogin(Customizer.withDefaults());
-        /*
-        * We will not see the log in page anymore
-        * There will be an alert box instead
-        *
-        * */
-        //        http.formLogin(Customizer.withDefaults());
-        /*
-            Make API stateless
-            cookies are not stored in server
-         */
-        http.httpBasic(Customizer.withDefaults());
+    SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
+        http.csrf(csrf ->
+                csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                        .ignoringRequestMatchers("/api/auth/public/**")
+        );
+        //http.csrf(AbstractHttpConfigurer::disable);
+        http.authorizeHttpRequests((requests)
+                -> requests
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                .requestMatchers("/api/csrf-token").permitAll()
+                .requestMatchers("/api/auth/public/**").permitAll()
+                .anyRequest().authenticated());
+        http.exceptionHandling(exception
+                -> exception.authenticationEntryPoint(unauthorizedHandler));
+        http.addFilterBefore(authenticationJwtTokenFilter(),
+                UsernamePasswordAuthenticationFilter.class);
+        http.cors(
+                cors -> cors.configurationSource(corsConfigurationSource())
+        );
+        http.formLogin(withDefaults());
+        http.httpBasic(withDefaults());
         return http.build();
     }
 
@@ -163,6 +150,25 @@ public class SecurityConfig {
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
         return authenticationConfiguration.getAuthenticationManager();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration corsConfig = new CorsConfiguration();
+        // Allow specific origins
+        corsConfig.setAllowedOrigins(Arrays.asList("http://localhost:3001"));
+
+        // Allow specific HTTP methods
+        corsConfig.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        // Allow specific headers
+        corsConfig.setAllowedHeaders(Arrays.asList("*"));
+        // Allow credentials (cookies, authorization headers)
+        corsConfig.setAllowCredentials(true);
+        corsConfig.setMaxAge(3600L);
+        // Define allowed paths (for all paths use "/**")
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", corsConfig); // Apply to all endpoints
+        return source;
     }
 
 }
