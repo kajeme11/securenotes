@@ -19,8 +19,8 @@ import java.util.List;
        -get specific user
 
  */
-@PreAuthorize("hasRole('ROLE_ADMIN')")
 @RestController
+@PreAuthorize("hasRole('ROLE_ADMIN')")
 @RequestMapping("/api/admin")
 public class AdminController {
 

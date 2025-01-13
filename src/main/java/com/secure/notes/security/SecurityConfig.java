@@ -6,6 +6,7 @@ import com.secure.notes.repositories.UserRepository;
 import com.secure.notes.security.jwt.AuthEntryPointJwt;
 import com.secure.notes.security.jwt.AuthTokenFilter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -53,6 +54,9 @@ public class SecurityConfig {
 
     @Autowired
     private AuthEntryPointJwt unauthorizedHandler;
+
+    @Value("${frontend.url}")
+    private String frontendUrl;
 
     @Bean
     public AuthTokenFilter authenticationJwtTokenFilter() {
@@ -156,7 +160,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfig = new CorsConfiguration();
         // Allow specific origins
-        corsConfig.setAllowedOrigins(Arrays.asList("http://localhost:3001"));
+        corsConfig.setAllowedOrigins(Arrays.asList(frontendUrl));
 
         // Allow specific HTTP methods
         corsConfig.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
