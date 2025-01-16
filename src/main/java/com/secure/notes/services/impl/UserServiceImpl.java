@@ -3,17 +3,29 @@ package com.secure.notes.services.impl;
 
 import com.secure.notes.dto.UserDTO;
 import com.secure.notes.models.AppRole;
+import com.secure.notes.models.PasswordResetToken;
 import com.secure.notes.models.Role;
 import com.secure.notes.models.User;
+import com.secure.notes.repositories.PasswordResetTokenRepository;
 import com.secure.notes.repositories.RoleRepository;
 import com.secure.notes.repositories.UserRepository;
+import com.secure.notes.security.response.MessageResponse;
 import com.secure.notes.services.UserService;
+import com.secure.notes.util.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -27,6 +39,14 @@ public class UserServiceImpl implements UserService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private PasswordResetTokenRepository passwordResetTokenRepository;
+
+    @Autowired
+    private EmailService emailService;
+
+    @Value("${frontend.url}")
+    private String frontendUrl;
 
     @Override
     public void updateUserRole(Long userId, String roleName) {
@@ -121,4 +141,35 @@ public class UserServiceImpl implements UserService {
             throw new RuntimeException("Failed to update password");
         }
     }
+
+    public void generatePasswordResetToken(String email){
+        User user = userRepository.findByEmail(email).orElseThrow(
+                () -> new RuntimeException("User not found"));
+        String token = UUID.randomUUID().toString();
+        Instant expiryDate = Instant.now().plus(24, ChronoUnit.HOURS);
+        PasswordResetToken passwordResetToken = new PasswordResetToken(token, expiryDate, user);
+        passwordResetTokenRepository.save(passwordResetToken);
+
+        String resetUrl = frontendUrl + "/reset-password?token=" + token;
+        //send email to the user requesting password reset
+        emailService.sendPasswordResetEmail(user.getEmail(), resetUrl);
+    }
+
+    @Override
+    public void resetPassword(String token, String newPassword) {
+        PasswordResetToken passwordResetToken = passwordResetTokenRepository.findByToken(token)
+                .orElseThrow(() -> new RuntimeException("Invalid password reset token"));
+        if(passwordResetToken.isUsed()){
+            throw new RuntimeException("Password reset token has already been used.");
+        }
+        if(passwordResetToken.getExpiryDate().isBefore(Instant.now())){
+            throw new RuntimeException("Password reset token has expired");
+        }
+        User user = passwordResetToken.getUser();
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        passwordResetToken.setUsed(true);
+        passwordResetTokenRepository.save(passwordResetToken);
+    }
+
 }
