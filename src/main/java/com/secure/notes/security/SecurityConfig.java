@@ -1,5 +1,6 @@
 package com.secure.notes.security;
 
+import com.secure.notes.config.OAuth2LoginSuccessHandler;
 import com.secure.notes.models.Role;
 import com.secure.notes.repositories.RoleRepository;
 import com.secure.notes.repositories.UserRepository;
@@ -10,6 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -55,6 +57,10 @@ public class SecurityConfig {
     @Autowired
     private AuthEntryPointJwt unauthorizedHandler;
 
+    @Autowired
+    @Lazy
+    private OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
+
     @Value("${frontend.url}")
     private String frontendUrl;
 
@@ -75,9 +81,13 @@ public class SecurityConfig {
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/csrf-token").permitAll()
                 .requestMatchers("/api/auth/public/**").permitAll()
+                        .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/oauth2/**").permitAll()
                 .anyRequest().authenticated())
-                .oauth2Client(oauth -> {});
+//                .oauth2Client(oauth2 -> {})
+                .oauth2Login(oauth2 -> {
+                    oauth2.successHandler(oAuth2LoginSuccessHandler);
+                });
         http.exceptionHandling(exception
                 -> exception.authenticationEntryPoint(unauthorizedHandler));
         http.addFilterBefore(authenticationJwtTokenFilter(),
@@ -112,8 +122,8 @@ public class SecurityConfig {
             Role adminRole = roleRepository.findByRoleName(AppRole.ROLE_ADMIN)
                     .orElseGet(() -> roleRepository.save(new Role(AppRole.ROLE_ADMIN)));
 
-            if (!userRepository.existsByUserName("kj007")) {
-                User user1 = new User("kj007", "kajeme007@gmail.com", passwordEncoder.encode("password"));
+            if (!userRepository.existsByUserName("user1")) {
+                User user1 = new User("user1", "user1@gmail.com", passwordEncoder.encode("password"));
                 user1.setAccountNonLocked(false);
                 user1.setAccountNonExpired(true);
                 user1.setCredentialsNonExpired(true);
@@ -126,8 +136,8 @@ public class SecurityConfig {
                 userRepository.save(user1);
             }
 
-            if (!userRepository.existsByUserName("admin3")) {
-                User admin = new User("admin3", "admin3@example.com", passwordEncoder.encode("adminPass"));
+            if (!userRepository.existsByUserName("admin")) {
+                User admin = new User("admin", "admin@example.com", passwordEncoder.encode("adminPass"));
                 admin.setAccountNonLocked(true);
                 admin.setAccountNonExpired(true);
                 admin.setCredentialsNonExpired(true);

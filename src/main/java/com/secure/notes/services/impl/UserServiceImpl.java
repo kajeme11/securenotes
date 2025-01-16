@@ -172,4 +172,17 @@ public class UserServiceImpl implements UserService {
         passwordResetTokenRepository.save(passwordResetToken);
     }
 
+    @Override
+    public Optional<User> findByEmail(String email) {
+        return userRepository.findByEmail(email);
+    }
+
+    @Override
+    public void registerUser(User newUser) {
+        if(newUser.getPassword() != null){
+            newUser.setPassword(passwordEncoder.encode(newUser.getPassword()));
+        }
+        userRepository.save(newUser);
+    }
+
 }
